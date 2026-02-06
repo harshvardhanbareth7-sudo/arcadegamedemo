@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Car Game – Select Car</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body{
+    margin:0;
+    height:100vh;
+    font-family: "Segoe UI", sans-serif;
+    background: linear-gradient(#020617,#000);
+    color:#fff;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+}
+
+/* MAIN */
+#startScreen{
+    width:100%;
+    height:100%;
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    gap:25px;
+}
+
+/* BACK */
+.back-btn{
+    position:absolute;
+    top:15px;
+    left:15px;
+    background:none;
+    border:none;
+    color:#60a5fa;
+    font-size:16px;
+    cursor:pointer;
+}
+
+/* SLIDER */
+.slider{
+    display:flex;
+    gap:20px;
+}
+
+.car-card{
+    width:90px;
+    height:150px;
+    border:2px solid #334155;
+    border-radius:12px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:flex-end;
+    padding-bottom:10px;
+    cursor:pointer;
+    transition:.3s;
+}
+
+.car-preview{
+    width:40px;
+    border-radius:6px;
+    margin-bottom:10px;
+}
+
+.small{height:60px;}
+.medium{height:80px;}
+.big{height:100px;}
+
+.car-card.active{
+    border-color:#22c55e;
+    transform:scale(1.08);
+}
+
+/* COLORS */
+.colors{
+    display:flex;
+    gap:15px;
+}
+
+.color-btn{
+    width:34px;
+    height:34px;
+    border-radius:50%;
+    border:2px solid #fff;
+    cursor:pointer;
+}
+
+.color-btn.active{
+    outline:3px solid #22c55e;
+}
+
+/* PLAY */
+.play-btn{
+    position:absolute;
+    bottom:25px;
+    right:25px;
+    background:#22c55e;
+    color:#000;
+    border:none;
+    padding:12px 26px;
+    font-size:16px;
+    border-radius:8px;
+    cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+
+<div id="startScreen">
+    <button class="back-btn" onclick="history.back()">⬅ Back</button>
+
+    <h2>Select Car Size</h2>
+    <div class="slider">
+        <div class="car-card active" data-size="small">
+            <div class="car-preview small"></div>
+            Small
+        </div>
+        <div class="car-card" data-size="medium">
+            <div class="car-preview medium"></div>
+            Medium
+        </div>
+        <div class="car-card" data-size="big">
+            <div class="car-preview big"></div>
+            Big
+        </div>
+    </div>
+
+    <h2>Select Color</h2>
+    <div class="colors">
+        <div class="color-btn active" data-color="red" style="background:red"></div>
+        <div class="color-btn" data-color="blue" style="background:blue"></div>
+        <div class="color-btn" data-color="green" style="background:green"></div>
+        <div class="color-btn" data-color="yellow" style="background:yellow"></div>
+        <div class="color-btn" data-color="pink" style="background:pink"></div>
+    </div>
+    
+    <button class="play-btn" onclick="playGame()">Play ▶</button>
+</div>
+
+<script>
+let selectedCar = {
+    size: "small",
+    color: "red"
+};
+
+/* SIZE SELECT */
+document.querySelectorAll(".car-card").forEach(card=>{
+    card.onclick=()=>{
+        document.querySelectorAll(".car-card").forEach(c=>c.classList.remove("active"));
+        card.classList.add("active");
+        selectedCar.size = card.dataset.size;
+        updatePreview();
+    }
+});
+
+/* COLOR SELECT */
+document.querySelectorAll(".color-btn").forEach(btn=>{
+    btn.onclick=()=>{
+        document.querySelectorAll(".color-btn").forEach(b=>b.classList.remove("active"));
+        btn.classList.add("active");
+        selectedCar.color = btn.dataset.color;
+        updatePreview();
+    }
+});
+
+/* UPDATE PREVIEW COLOR */
+function updatePreview(){
+    document.querySelectorAll(".car-preview").forEach(p=>{
+        p.style.background = selectedCar.color;
+    });
+}
+
+/* PLAY */
+function playGame(){
+    // save selected data
+    localStorage.setItem("carSize", selectedCar.size);
+    localStorage.setItem("carColor", selectedCar.color);
+
+    // move to game window
+    window.location.href = "game.html";
+}
+
+updatePreview();
+</script>
+
+</body>
+</html>

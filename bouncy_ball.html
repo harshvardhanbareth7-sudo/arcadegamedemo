@@ -1,0 +1,234 @@
+<!--now a new game same arcade logic 
+a bouncy ball free fall from top and we have save it from falling down by using a 3 times width size of ball slit and when ball touces slit it bouncy back to top again like real ball and try to fall again
+score based on how many time we saved it  -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Bouncy Ball Game</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body{
+    margin:0;
+    background: linear-gradient(#111,#222);
+    font-family:"Segoe UI",sans-serif;
+    overflow:hidden;
+    color:white;
+}
+
+#gameScreen{
+    width:100%;
+    height:100vh;
+    position:relative;
+}
+
+.back-btn{
+    position:absolute;
+    top:15px;
+    left:15px;
+    background:none;
+    border:none;
+    color:#60a5fa;
+    font-size:16px;
+    cursor:pointer;
+    z-index:10;
+}
+
+.top-bar{
+    position:absolute;
+    top:15px;
+    width:100%;
+    display:flex;
+    justify-content:center;
+    gap:40px;
+    font-weight:600;
+    z-index:5;
+}
+
+canvas{
+    display:block;
+    margin:auto;
+    background:#111;
+}
+
+/* GAME OVER MODAL */
+#gameOver{
+    position:absolute;
+    inset:0;
+    background:rgba(0,0,0,0.8);
+    display:none;
+    justify-content:center;
+    align-items:center;
+}
+
+.modal{
+    background:#111;
+    padding:25px;
+    border-radius:10px;
+    border:2px solid #334155;
+    text-align:center;
+    width:280px;
+}
+</style>
+</head>
+<body>
+
+<div id="gameScreen">
+
+    <button class="back-btn" ><a href="arcadegallary.html">⬅ Back</a></button>
+
+    <div class="top-bar">
+        <div>Score: <span id="score">0</span></div>
+        <div>Time: <span id="time">0</span>s</div>
+    </div>
+
+    <canvas id="gameCanvas" width="360" height="600"></canvas>
+
+    <div id="gameOver">
+        <div class="modal">
+            <h2>Game Over</h2>
+            <p>Score: <span id="finalScore"></span></p>
+            <p>Time: <span id="finalTime"></span>s</p>
+            <button onclick="goBack()">Back</button>
+        </div>
+    </div>
+
+</div>
+
+<script>
+/* ================== SETUP ================== */
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+let score = 0;
+let time = 0;
+let gameLoop, timerLoop;
+
+/* BALL AS CIRCLE */
+let ball = {
+    x: canvas.width/2,
+    y: 50,
+    radius: 15,   // circular radius
+    dx: 2,        // horizontal speed
+    dy: 4,        // vertical speed
+    color: "#f87171"
+};
+
+/* SLIT / PADDLE */
+let slit = {
+    width: ball.radius * 3,
+    height: 15,
+    x: canvas.width/2 - (ball.radius*3)/2,
+    y: canvas.height - 50,
+    color: "#60a5fa",
+    speed: 8
+};
+
+/* ================== START GAME ================== */
+function startGame(){
+    score = 0;
+    time = 0;
+    document.getElementById("score").textContent = score;
+    document.getElementById("time").textContent = time;
+
+    ball.x = canvas.width/2;
+    ball.y = 50;
+    ball.dx = 2;
+    ball.dy = 4;
+
+    gameLoop = setInterval(updateGame, 20);
+    timerLoop = setInterval(()=>{
+        time++;
+        document.getElementById("time").textContent = time;
+    },1000);
+}
+
+startGame();
+
+/* ================== GAME LOOP ================== */
+function updateGame(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    /* DRAW BALL AS CIRCLE */
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+    ctx.fillStyle = ball.color;
+    ctx.fill();
+    ctx.closePath();
+
+    /* DRAW SLIT */
+    ctx.fillStyle = slit.color;
+    ctx.fillRect(slit.x, slit.y, slit.width, slit.height);
+
+    /* UPDATE BALL POSITION */
+    ball.x += ball.dx;
+    ball.y += ball.dy;
+
+    /* COLLISION WITH SLIT */
+    if(ball.y + ball.radius >= slit.y &&
+       ball.x + ball.radius >= slit.x &&
+       ball.x - ball.radius <= slit.x + slit.width &&
+       ball.dy > 0
+    ){
+        ball.dy *= -1; // bounce up
+        ball.y = slit.y - ball.radius;
+
+        // randomize horizontal direction slightly
+        ball.dx += (Math.random() - 0.5) * 2;
+        if(ball.dx > 5) ball.dx = 5;
+        if(ball.dx < -5) ball.dx = -5;
+
+        score++;
+        document.getElementById("score").textContent = score;
+    }
+
+    /* COLLISION WITH WALLS */
+    if(ball.x - ball.radius <= 0){
+        ball.dx = Math.abs(ball.dx); // bounce right
+        ball.x = ball.radius;
+    }
+    if(ball.x + ball.radius >= canvas.width){
+        ball.dx = -Math.abs(ball.dx); // bounce left
+        ball.x = canvas.width - ball.radius;
+    }
+    if(ball.y - ball.radius <= 0){
+        ball.dy = Math.abs(ball.dy); // bounce down
+        ball.y = ball.radius;
+    }
+
+    /* BALL FALLS DOWN = GAME OVER */
+    if(ball.y - ball.radius > canvas.height){
+        endGame();
+    }
+}
+
+/* ================== CONTROLS ================== */
+document.addEventListener("keydown", e=>{
+    if(e.key === "ArrowLeft"){
+        slit.x -= slit.speed;
+        if(slit.x < 0) slit.x = 0;
+    }
+    if(e.key === "ArrowRight"){
+        slit.x += slit.speed;
+        if(slit.x + slit.width > canvas.width) slit.x = canvas.width - slit.width;
+    }
+});
+
+/* ================== GAME OVER ================== */
+function endGame(){
+    clearInterval(gameLoop);
+    clearInterval(timerLoop);
+    document.getElementById("finalScore").textContent = score;
+    document.getElementById("finalTime").textContent = time;
+    document.getElementById("gameOver").style.display = "flex";
+}
+
+/* ================== BACK ================== */
+function goBack(){
+    window.location.href = "index.html";
+}
+</script>
+
+</body>
+</html>

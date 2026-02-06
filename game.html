@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Car Game – Play</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body{
+    margin:0;
+    background:linear-gradient(#020617,#000);
+    font-family:"Segoe UI",sans-serif;
+    color:white;
+    overflow:hidden;
+}
+
+#gameScreen{
+    width:100%;
+    height:100vh;
+    position:relative;
+}
+
+.back-btn{
+    position:absolute;
+    top:15px;
+    left:15px;
+    background:none;
+    border:none;
+    color:#60a5fa;
+    font-size:16px;
+    cursor:pointer;
+    z-index:10;
+}
+
+.top-bar{
+    position:absolute;
+    top:15px;
+    width:100%;
+    display:flex;
+    justify-content:center;
+    gap:40px;
+    font-weight:600;
+    z-index:5;
+}
+
+canvas{
+    display:block;
+    margin:auto;
+    background:#020617;
+}
+
+/* GAME OVER */
+#gameOver{
+    position:absolute;
+    inset:0;
+    background:rgba(0,0,0,0.8);
+    display:none;
+    justify-content:center;
+    align-items:center;
+}
+
+.modal{
+    background:#020617;
+    padding:25px;
+    border-radius:10px;
+    border:2px solid #334155;
+    text-align:center;
+    width:280px;
+}
+</style>
+</head>
+
+<body>
+
+<div id="gameScreen">
+
+    <button class="back-btn" onclick="goBack()">⬅ Back</button>
+
+    <div class="top-bar">
+        <div>Score: <span id="score">0</span></div>
+        <div>Time: <span id="time">0</span>s</div>
+    </div>
+
+    <canvas id="gameCanvas" width="360" height="600"></canvas>
+
+    <div id="gameOver">
+        <div class="modal">
+            <h2>Game Over</h2>
+            <p>Score: <span id="finalScore"></span></p>
+            <p>Time: <span id="finalTime"></span>s</p>
+            <button onclick="goBack()">Back</button>
+        </div>
+    </div>
+
+</div>
+
+<script>
+/* ===================== SETUP ===================== */
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+/* LOAD SELECTED CAR */
+const carSize = localStorage.getItem("carSize") || "small";
+const carColor = localStorage.getItem("carColor") || "red";
+
+/* LANES */
+const lanes = [80, 180, 280];
+
+/* PLAYER */
+let player = {
+    lane: 1,
+    width: carSize === "small" ? 35 : carSize === "medium" ? 45 : 55,
+    height: carSize === "small" ? 70 : carSize === "medium" ? 85 : 100,
+    y: 480,
+    color: carColor
+};
+
+let enemies = [];
+let lastEnemyY = -Infinity;
+let score = 0;
+let time = 0;
+let baseSpeed = 5;
+let speed = baseSpeed;
+let gameLoop, timerLoop;
+
+/* ===================== DRAW CAR ===================== */
+function drawCar(x, y, w, h, color){
+    /* BODY */
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.roundRect(x, y, w, h, 10);
+    ctx.fill();
+
+    /* ROOF */
+    ctx.fillStyle = "#111";
+    ctx.beginPath();
+    ctx.roundRect(x + w*0.15, y + h*0.2, w*0.7, h*0.3, 8);
+    ctx.fill();
+
+    /* WINDOWS */
+    ctx.fillStyle = "#38bdf8";
+    ctx.fillRect(x + w*0.2, y + h*0.25, w*0.22, h*0.18);
+    ctx.fillRect(x + w*0.58, y + h*0.25, w*0.22, h*0.18);
+
+    /* WHEELS */
+    ctx.fillStyle = "#000";
+    ctx.fillRect(x - 5, y + h*0.15, 5, h*0.25);
+    ctx.fillRect(x - 5, y + h*0.6, 5, h*0.25);
+    ctx.fillRect(x + w, y + h*0.15, 5, h*0.25);
+    ctx.fillRect(x + w, y + h*0.6, 5, h*0.25);
+}
+
+/* ===================== GAME START ===================== */
+function startGame(){
+    enemies = [];
+    score = 0;
+    time = 0;
+    lastEnemyY = -Infinity;
+    document.getElementById("score").textContent = score;
+    document.getElementById("time").textContent = time;
+
+    gameLoop = setInterval(updateGame, 30);
+    timerLoop = setInterval(() => {
+    time++;
+    document.getElementById("time").textContent = time;
+
+    // increase speed every 30 seconds
+    speed = baseSpeed + Math.floor(time / 30) * 0.5;
+}, 1000);
+
+}
+
+startGame();
+
+/* ===================== GAME LOOP ===================== */
+function updateGame(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    /* SPAWN ENEMY WITH SAFE GAP */
+    // SPAWN ENEMY WITH SAFE VERTICAL GAP (2× player height)
+const minGap = player.height * 2;
+
+if (Math.random() < 0.04) {
+    let canSpawn = true;
+
+    if (enemies.length > 0) {
+        const lastEnemy = enemies[enemies.length - 1];
+        if (lastEnemy.y < minGap) {
+            canSpawn = false;
+        }
+    }
+
+    if (canSpawn) {
+        enemies.push({
+            lane: Math.floor(Math.random() * 3),
+            y: -player.height,
+            color: ["red","blue","green","yellow","pink"]
+                   [Math.floor(Math.random() * 5)]
+        });
+    }
+}
+
+
+    /* DRAW & UPDATE ENEMIES */
+    enemies.forEach((e, index)=>{
+        e.y += speed;
+
+        drawCar(
+            lanes[e.lane] - player.width / 2,
+            e.y,
+            player.width,
+            player.height,
+            e.color
+        );
+
+        /* PASSED SAFELY */
+        if(e.y > canvas.height){
+            score++;
+            document.getElementById("score").textContent = score;
+            enemies.splice(index,1);
+        }
+
+        /* COLLISION */
+        if(
+            e.lane === player.lane &&
+            e.y + player.height > player.y &&
+            e.y < player.y + player.height
+        ){
+            endGame();
+        }
+    });
+
+    /* DRAW PLAYER */
+    drawCar(
+        lanes[player.lane] - player.width / 2,
+        player.y,
+        player.width,
+        player.height,
+        player.color
+    );
+}
+
+/* ===================== CONTROLS ===================== */
+document.addEventListener("keydown", e=>{
+    if(e.key === "ArrowLeft" && player.lane > 0){
+        player.lane--;
+    }
+    if(e.key === "ArrowRight" && player.lane < 2){
+        player.lane++;
+    }
+});
+
+/* ===================== GAME OVER ===================== */
+function endGame(){
+    clearInterval(gameLoop);
+    clearInterval(timerLoop);
+    document.getElementById("finalScore").textContent = score;
+    document.getElementById("finalTime").textContent = time;
+    document.getElementById("gameOver").style.display = "flex";
+}
+
+/* ===================== BACK ===================== */
+function goBack(){
+    window.location.href = "index.html";
+}
+</script>
+
+</body>
+</html>

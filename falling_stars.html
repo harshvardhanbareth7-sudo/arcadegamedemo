@@ -1,0 +1,278 @@
+<!--🎮 Game Concept: Falling Stars Catcher
+Stars fall from the top of the screen at random positions.
+Player controls a basket/paddle at the bottom (left/right arrow keys).
+Catching a yellow star → +1 point
+Catching a red star → -1 point (penalty)
+Missing stars → nothing happens
+Score and timer displayed on top
+Game over after a certain time (e.g., 60 seconds) or after missing too many stars
+This keeps the classic arcade logic, easy to extend with multiple difficulty levels or increasing speed over time.-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Falling Stars Catcher with Stylish Bombs</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body{
+    margin:0;
+    background: linear-gradient(#111,#222);
+    font-family:"Segoe UI",sans-serif;
+    overflow:hidden;
+    color:white;
+}
+
+#gameScreen{
+    width:100%;
+    height:100vh;
+    position:relative;
+}
+
+.back-btn{
+    position:absolute;
+    top:15px;
+    left:15px;
+    background:none;
+    border:none;
+    color:#60a5fa;
+    font-size:16px;
+    cursor:pointer;
+    z-index:10;
+}
+
+.top-bar{
+    position:absolute;
+    top:15px;
+    width:100%;
+    display:flex;
+    justify-content:center;
+    gap:40px;
+    font-weight:600;
+    z-index:5;
+}
+
+canvas{
+    display:block;
+    margin:auto;
+    background:#111;
+}
+
+/* GAME OVER MODAL */
+#gameOver{
+    position:absolute;
+    inset:0;
+    background:rgba(0,0,0,0.8);
+    display:none;
+    justify-content:center;
+    align-items:center;
+}
+
+.modal{
+    background:#111;
+    padding:25px;
+    border-radius:10px;
+    border:2px solid #334155;
+    text-align:center;
+    width:280px;
+}
+</style>
+</head>
+<body>
+
+<div id="gameScreen">
+
+    <button class="back-btn" ><a href="arcadegallary.html">⬅ Back</a></button>
+
+    <div class="top-bar">
+        <div>Score: <span id="score">0</span></div>
+        <div>Time: <span id="time">0</span>s</div>
+    </div>
+
+    <canvas id="gameCanvas" width="360" height="600"></canvas>
+
+    <div id="gameOver">
+        <div class="modal">
+            <h2>Game Over</h2>
+            <p>Score: <span id="finalScore"></span></p>
+            <p>Time: <span id="finalTime"></span>s</p>
+            <button onclick="goBack()">Back</button>
+        </div>
+    </div>
+
+</div>
+
+<script>
+/* ================== SETUP ================== */
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+let score = 0;
+let time = 0;
+let gameLoop, timerLoop;
+
+/* PLAYER BASKET */
+let basket = {
+    width: 80,
+    height: 15,
+    x: canvas.width/2 - 40,
+    y: canvas.height - 50,
+    speed: 8,
+    color: "#60a5fa"
+};
+
+/* STARS AND BOMBS */
+let stars = [];
+let bombs = [];
+
+/* BOMB TIMING */
+let nextBombTime = 20;
+
+/* ================== START GAME ================== */
+function startGame(){
+    score = 0;
+    time = 0;
+    stars = [];
+    bombs = [];
+    nextBombTime = 20;
+    document.getElementById("score").textContent = score;
+    document.getElementById("time").textContent = time;
+
+    gameLoop = setInterval(updateGame, 20);
+    timerLoop = setInterval(()=>{
+        time++;
+        document.getElementById("time").textContent = time;
+
+        // check if it's time to spawn a bomb
+        if(time >= nextBombTime){
+            spawnBomb();
+            // next bomb in random 7-12 sec
+            nextBombTime = time + 7 + Math.floor(Math.random()*6);
+        }
+
+        if(time >= 60){ // game ends at 60s
+            endGame();
+        }
+    },1000);
+}
+
+startGame();
+
+/* ================== SPAWN BOMBS ================== */
+function spawnBomb(){
+    bombs.push({
+        x: Math.random() * (canvas.width - 30) + 15,
+        y: -30,
+        radius: 15, // for collision
+        dy: 3 + Math.random()*2,
+        text: "💣",
+        fontSize: 28
+    });
+}
+
+/* ================== GAME LOOP ================== */
+function updateGame(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    // draw basket
+    ctx.fillStyle = basket.color;
+    ctx.fillRect(basket.x, basket.y, basket.width, basket.height);
+
+    // spawn new stars randomly
+    if(Math.random() < 0.02){
+        stars.push({
+            x: Math.random() * (canvas.width - 20) + 10,
+            y: -20,
+            radius: 10,
+            color: Math.random() < 0.8 ? "yellow" : "orange",
+            dy: 3 + Math.random()*2
+        });
+    }
+
+    // update stars
+    for(let i=stars.length-1; i>=0; i--){
+        let s = stars[i];
+        s.y += s.dy;
+
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.radius,0,Math.PI*2);
+        ctx.fillStyle = s.color;
+        ctx.fill();
+        ctx.closePath();
+
+        // collision with basket
+        if(s.y + s.radius >= basket.y &&
+           s.x >= basket.x &&
+           s.x <= basket.x + basket.width
+        ){
+            if(s.color === "yellow") score++;
+            if(s.color === "orange") score = Math.max(0, score-1);
+            document.getElementById("score").textContent = score;
+            stars.splice(i,1);
+        }
+
+        // remove stars falling below screen
+        if(s.y - s.radius > canvas.height){
+            stars.splice(i,1);
+        }
+    }
+
+    // update bombs
+    for(let i=bombs.length-1; i>=0; i--){
+        let b = bombs[i];
+        b.y += b.dy;
+
+        // draw bomb as text with shadow
+        ctx.save();
+        ctx.font = b.fontSize + "px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.shadowColor = "red";
+        ctx.shadowBlur = 12;
+        ctx.fillText(b.text, b.x, b.y);
+        ctx.restore();
+
+        // collision with basket = GAME OVER
+        if(b.y + b.radius >= basket.y &&
+           b.x >= basket.x &&
+           b.x <= basket.x + basket.width
+        ){
+            endGame();
+        }
+
+        // remove bombs falling below screen
+        if(b.y - b.radius > canvas.height){
+            bombs.splice(i,1);
+        }
+    }
+}
+
+/* ================== CONTROLS ================== */
+document.addEventListener("keydown", e=>{
+    if(e.key === "ArrowLeft"){
+        basket.x -= basket.speed;
+        if(basket.x < 0) basket.x = 0;
+    }
+    if(e.key === "ArrowRight"){
+        basket.x += basket.speed;
+        if(basket.x + basket.width > canvas.width) basket.x = canvas.width - basket.width;
+    }
+});
+
+/* ================== GAME OVER ================== */
+function endGame(){
+    clearInterval(gameLoop);
+    clearInterval(timerLoop);
+    document.getElementById("finalScore").textContent = score;
+    document.getElementById("finalTime").textContent = time;
+    document.getElementById("gameOver").style.display = "flex";
+}
+
+/* ================== BACK ================== */
+function goBack(){
+    window.location.href = "index.html";
+}
+</script>
+
+</body>
+</html>
